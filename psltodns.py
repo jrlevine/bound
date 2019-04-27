@@ -76,8 +76,8 @@ def donode(name, p, skip=None, pbound=None):
             if debug:
                 print(f"; {label} {skip} {pbound}", file=fo)
             if exclude:
-                print(f'{label} IN TXT "bound=1  NOBOUND . {me}"', file=fo)
-                print(f'*.{label} IN TXT "bound=1  NOBOUND . {me}"', file=fo)
+                print(f'{label} IN TXT "bound=1 NOBOUND . {me}"', file=fo)
+                print(f'*.{label} IN TXT "bound=1 NOBOUND . {me}"', file=fo)
             else:
                 print(f'*.{label} IN TXT "bound=1  . . {me}"', file=fo)
         for n in nl:
