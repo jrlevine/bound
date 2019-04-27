@@ -1,0 +1,8 @@
+# PSL zone upload
+#
+url https://example.com/api
+
+apikey swordfish
+
+zone bound.services.net
+
