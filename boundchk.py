@@ -64,7 +64,7 @@ for name in args.names:
         if 'NOBOUND' not in flags and nspoint <= len(nl):
             d = '.'.join(nl[1-nspoint:])
             if debug:
-                print("bound at",d)
+                print("bound at",nspoint,d)
             bounds.append(d)
             opoint = nspoint
 
@@ -79,6 +79,8 @@ for name in args.names:
         print("  ",b)
 
     if opoint:
-        print("org domain for",name,"is", '.'.join(nl[-opoint-1:]))
+        print("org domain for",name,"is", '.'.join(nl[-opoint:]))
     else:
         print("no org domain for",name)
+    print()
+
