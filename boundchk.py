@@ -1,86 +1,96 @@
 #!/usr/bin/env python3
 
-import argparse
-import sys
 import dns.resolver
 
-parser = argparse.ArgumentParser(description='Check DNS boundary')
-parser.add_argument('-d', action='store_true', help="debug info");
-parser.add_argument('--base', type=str, help="base domain", default='bound.services.net');
-parser.add_argument('names', type=str, nargs='+', help="Names to check");
-args = parser.parse_args();
+class Boundchk:
+    def __init__(self, base=None, debug=False):
+        self.base = base
+        self.debug = debug
+        self.res = dns.resolver.Resolver()
 
-debug = args.d
-base = args.base
+    def check(self, name):
+        """
+        check boundaries for name
+        returns ([bounds], orgdomain)
+        """
 
-res = dns.resolver.Resolver()
+        nl = name.split('.')
 
-for name in args.names:
-    if debug:
-        print("check",name)
-    nl = name.split('.')
+        spoint = 1                          # split point for _bound
+        opoint = 0                          # org domain boundary
+        bounds = []
 
-    spoint = 1                          # split point for _bound
-    opoint = 0                          # org domain boundary
-    bounds = []
-
-    while spoint < len(nl):             # avoid endless loop
-        a = nl[:-spoint]
-        b = nl[-spoint:]
-        p = f"{'.'.join(a)}._bound.{'.'.join(b)}.{base}."
-        if debug:
-            print("try", spoint, p)
-        try:
-            q = res.query(p, 'txt')
-        except (dns.resolver.NXDOMAIN, dns.exception.Timeout, dns.resolver.NoAnswer) as err:
-            if debug:
-                print("failed", err)
-            break
-        txtrec = None
-        for qr in q:
-            t = "".join(x.decode() for x in qr.strings)
-            if t.startswith('bound=1'):
-                txtrec = t
+        while spoint < len(nl):             # avoid endless loop
+            a = nl[:-spoint]
+            b = nl[-spoint:]
+            p = f"{'.'.join(a)}._bound.{'.'.join(b)}.{self.base}."
+            if self.debug:
+                print("try", spoint, p)
+            try:
+                q = self.res.query(p, 'txt')
+            except (dns.resolver.NXDOMAIN, dns.exception.Timeout, dns.resolver.NoAnswer) as err:
+                if self.debug:
+                    print("failed", err)
                 break
 
-        if not txtrec:                  # no more
-            break
+            txtrec = None
+            for qr in q:
+                t = "".join(x.decode() for x in qr.strings)
+                if t.startswith('bound=1'):
+                    txtrec = t
+                    break
 
-        (tag, fl, ty, dom) = txtrec.split()
-        if debug:
-            print("got",tag,fl,ty,dom)
+            if not txtrec:                  # no more
+                break
 
-        if fl == '.':
-            flags = ()
+            (tag, fl, ty, dom) = txtrec.split()
+            if self.debug:
+                print("got",tag,fl,ty,dom)
+
+            if fl == '.':
+                flags = ()
+            else:
+                flags = set(fl.split(','))
+            if ty == '.':
+                types = ()
+            else:
+                types = set(ty.split(','))
+
+            nspoint = 1+len(dom.split('.'))
+
+            if 'NOBOUND' not in flags and nspoint <= len(nl):
+                d = '.'.join(nl[1-nspoint:])
+                if self.debug:
+                    print("bound at",nspoint,d)
+                bounds.append(d)
+                opoint = nspoint
+
+            if nspoint == spoint:
+                if self.debug:
+                    print("done", spoint)
+                break
+            spoint = nspoint
+
+        if opoint:
+            orgdomain = '.'.join(nl[-opoint:])
         else:
-            flags = set(fl.split(','))
-        if ty == '.':
-            types = ()
-        else:
-            types = set(ty.split(','))
+            orgdomain = None
+        return (bounds, orgdomain)
 
-        nspoint = 1+len(dom.split('.'))
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description='Check DNS boundary')
+    parser.add_argument('-d', action='store_true', help="debug info");
+    parser.add_argument('--base', type=str, help="base domain", default='bound.services.net');
+    parser.add_argument('names', type=str, nargs='+', help="Names to check");
+    args = parser.parse_args();
 
-        if 'NOBOUND' not in flags and nspoint <= len(nl):
-            d = '.'.join(nl[1-nspoint:])
-            if debug:
-                print("bound at",nspoint,d)
-            bounds.append(d)
-            opoint = nspoint
+    b = Boundchk(base=args.base, debug=args.d)
+    for name in args.names:
+        (bl, od) = b.check(name)
 
-        if nspoint == spoint:
-            if debug:
-                print("done", spoint)
-            break
-        spoint = nspoint
-
-    print("suffixes for",name)
-    for b in bounds:
-        print("  ",b)
-
-    if opoint:
-        print("org domain for",name,"is", '.'.join(nl[-opoint:]))
-    else:
-        print("no org domain for",name)
-    print()
-
+        print("Boundaries for",name)
+        for bb in bl:
+            print("  ",bb)
+        print("Org domain",od)
+        print()
