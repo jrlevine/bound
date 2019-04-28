@@ -59,16 +59,18 @@ for name in args.names:
         else:
             types = set(ty.split(','))
 
-        nspoint = len(dom.split('.'))
+        nspoint = 1+len(dom.split('.'))
 
-        if 'NOBOUND' not in flags and nspoint < len(nl):
-            d = '.'.join(nl[-nspoint:])
+        if 'NOBOUND' not in flags and nspoint <= len(nl):
+            d = '.'.join(nl[1-nspoint:])
             if debug:
                 print("bound at",d)
             bounds.append(d)
             opoint = nspoint
 
         if nspoint == spoint:
+            if debug:
+                print("done", spoint)
             break
         spoint = nspoint
 
