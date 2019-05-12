@@ -6,10 +6,13 @@ import sys
 import json
 import requests
 
+vanity = None
+
 parser = argparse.ArgumentParser(description='Turn PSL into DNS')
 parser.add_argument('-d', action='store_true', help="debug info");
 parser.add_argument('--dump', action='store_true', help="dump tree of names");
 parser.add_argument('--pub', action='store_true', help="public only");
+parser.add_argument('--vanity', type=str, help="file of vanity TLDs");
 parser.add_argument('--upload', action='store_true', help="store into DNS zone");
 parser.add_argument('--config', type=str, help="config file", default='pslconfig.txt');
 parser.add_argument('file', type=str, help="Input file");
@@ -25,8 +28,13 @@ if args.upload:
 else:
     fo = sys.stdout
 
+if args.vanity:
+    # make set of vanity TLDs
+    with open(args.vanity, "r") as f:
+        vanity = frozenset( l.strip() for l in f if l[:1] not in ('#','\n','') )
+
 root = {}
-# make the file into a tree of dicts
+# make the file into a tree of per-label dicts
 # each dict is a name, if it had a PSL line the dict has a '!' entry
 # saying whether it was regular or excluded
 
@@ -46,8 +54,8 @@ with open(args.file) as f:
             line = line[1:]
 
 
-        domain = line.strip().encode('idna').decode()
-        d = tuple(reversed(domain.split('.')))
+        domain = line.strip().encode('idna').decode() # turn into A-labels for the DNS
+        d = reversed(domain.split('.'))
 
         p = root
 
@@ -56,6 +64,8 @@ with open(args.file) as f:
                 p[l] = dict()
             p = p[l]
         p['!'] = exclude
+
+# done making label tree
 
 def donode(label, p, parent=[], pbound=0):
     """
@@ -68,7 +78,7 @@ def donode(label, p, parent=[], pbound=0):
 
     name =  [label]+parent              # name as a list
     me = ".".join(name)                 # name as a string
-    lbound = 1+pbound
+    lbound = 1+pbound                   # put the _bound one label beyond pbound
 
     # label for this boundary
     if label == '*':        # don't do double star
@@ -87,7 +97,7 @@ def donode(label, p, parent=[], pbound=0):
     # next bound
     if bound:
         if debug:
-            print(f"; {name} {exclude} {pbound}", file=fo)
+            print(f"; {me} {exclude} {pbound}", file=fo)
         if exclude:
             print(f'{blabel} IN TXT "bound=1 NOBOUND . {me}"', file=fo)
         else:
@@ -107,7 +117,14 @@ if args.dump:
     print(root)
 
 for n in iter(root):
-    donode(n, root[n])
+    if vanity and n in vanity:
+        if len(root[n]) > 1 or root[n]['!']:
+            print("??? extra vanity", n)
+        # just the TLD
+        print(f'{n} IN TXT "bound=1 . . ."', file=fo)
+        print(f'*.{n} IN TXT "bound=1 . . ."', file=fo)
+    else:
+        donode(n, root[n])
 
 if args.upload:
     d = {

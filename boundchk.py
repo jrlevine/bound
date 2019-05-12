@@ -18,6 +18,7 @@ class Boundchk:
 
         spoint = 1                          # split point for _bound
         opoint = 0                          # org domain boundary
+        isvanity = False
         bounds = []
 
         while spoint < len(nl):             # avoid endless loop
@@ -56,10 +57,17 @@ class Boundchk:
             else:
                 types = set(ty.split(','))
 
-            nspoint = 1+len(dom.split('.'))
+            if dom == '.':
+                nspoint = 1
+                isvanity = True
+            else:
+                nspoint = 1+len(dom.split('.'))
 
             if 'NOBOUND' not in flags and nspoint <= len(nl):
-                d = '.'.join(nl[1-nspoint:])
+                if nspoint == 1:        # vanity
+                    d = "."
+                else:
+                    d = '.'.join(nl[1-nspoint:])
                 if self.debug:
                     print("bound at",nspoint,d)
                 bounds.append(d)
