@@ -35,7 +35,8 @@ if args.vanity:
 
 root = {}
 # make the file into a tree of per-label dicts
-# each dict is a name, if it had a PSL line the dict has a '!' entry
+# each dict is a name, if it had a PSL line
+# the dict has a '!' entry
 # saying whether it was regular or excluded
 
 with open(args.file) as f:
@@ -99,9 +100,9 @@ def donode(label, p, parent=[], pbound=0):
         if debug:
             print(f"; {me} {exclude} {pbound}", file=fo)
         if exclude:
-            print(f'{blabel} IN TXT "bound=1 NOBOUND . {me}"', file=fo)
+            print(f'{blabel} IN TXT "bound=1" "NOBOUND" "." "{me}"', file=fo)
         else:
-            print(f'{blabel} IN TXT "bound=1 . . {me}"', file=fo)
+            print(f'{blabel} IN TXT "bound=1" "." "." "{me}"', file=fo)
         nextbound = len(name)
     else:
         nextbound = pbound
@@ -117,12 +118,12 @@ if args.dump:
     print(root)
 
 for n in iter(root):
-    if vanity and n in vanity:
+    if vanity and n in vanity:          # mark as vanity if nothing below it
         if len(root[n]) > 1 or root[n]['!']:
-            print("??? extra vanity", n)
+            print("??? not a vanity", n)
         # just the TLD
-        print(f'{n} IN TXT "bound=1 . . ."', file=fo)
-        print(f'*.{n} IN TXT "bound=1 . . ."', file=fo)
+        print(f'{n} IN TXT "bound=1" "." "." "."', file=fo)
+        print(f'*.{n} IN TXT "bound=1" "." "." "."', file=fo)
     else:
         donode(n, root[n])
 

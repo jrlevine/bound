@@ -36,15 +36,15 @@ class Boundchk:
 
             txtrec = None
             for qr in q:
-                t = "".join(x.decode() for x in qr.strings)
-                if t.startswith('bound=1'):
+                t = tuple(x.decode() for x in qr.strings)
+                if len(t) >= 4 and t[0] == 'bound=1':
                     txtrec = t
                     break
 
             if not txtrec:                  # no more
                 break
 
-            (tag, fl, ty, dom) = txtrec.split()
+            (tag, fl, ty, dom) = txtrec[:4] # allow trailing junk
             if self.debug:
                 print("got",tag,fl,ty,dom)
 
