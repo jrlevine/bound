@@ -12,6 +12,7 @@ parser = argparse.ArgumentParser(description='Turn PSL into DNS')
 parser.add_argument('-d', action='store_true', help="debug info");
 parser.add_argument('--dump', action='store_true', help="dump tree of names");
 parser.add_argument('--pub', action='store_true', help="public only");
+parser.add_argument('--shadow', action='store_true', help="add shadow labels");
 parser.add_argument('--vanity', type=str, help="file of vanity TLDs");
 parser.add_argument('--upload', action='store_true', help="store into DNS zone");
 parser.add_argument('--config', type=str, help="config file", default='pslconfig.txt');
@@ -68,7 +69,7 @@ with open(args.file) as f:
 
 # done making label tree
 
-def donode(label, p, parent=[], pbound=0):
+def donode(label, p, parent=[], pbound=0, shadow=False):
     """
     process a node recursively
     label: current name
@@ -86,7 +87,11 @@ def donode(label, p, parent=[], pbound=0):
         bname = name
     else:
         bname = ['*']+name
-    blabel = ".".join(bname[:-lbound]) + "._bound." + ".".join(bname[-lbound:])
+
+    blabel =  ".".join(bname[:-lbound]) + "._bound." + ".".join(bname[-lbound:])
+    blabel2 = None
+    if shadow and len(bname) > 2:       # shadow entry above TLD
+        blabel2 = ".".join(bname[:-1]) + "._bound." + bname[-1]
 
     exclude = None
     bound = False
@@ -101,8 +106,12 @@ def donode(label, p, parent=[], pbound=0):
             print(f"; {me} {exclude} {pbound}", file=fo)
         if exclude:
             print(f'{blabel} IN TXT "bound=1" "NOBOUND" "." "{me}"', file=fo)
+            if blabel2:
+                print(f'{blabel2} IN TXT "bound=1" "NOBOUND" "." "{me}"', file=fo)
         else:
             print(f'{blabel} IN TXT "bound=1" "." "." "{me}"', file=fo)
+            if blabel2:
+                print(f'{blabel2} IN TXT "bound=1" "." "." "{me}"', file=fo)
         nextbound = len(name)
     else:
         nextbound = pbound
@@ -112,10 +121,13 @@ def donode(label, p, parent=[], pbound=0):
     ll.sort()
 
     for nl in ll:
-        donode(nl, p[nl], name, nextbound)
+        donode(nl, p[nl], name, nextbound, shadow=shadow)
 
 if args.dump:
-    print(root)
+    print(";",root)
+
+#if args.shadow:
+#    print("; shadow names included", file=fo)
 
 for n in iter(root):
     if vanity and n in vanity:          # mark as vanity if nothing below it
@@ -125,7 +137,7 @@ for n in iter(root):
         print(f'{n} IN TXT "bound=1" "." "." "."', file=fo)
         print(f'*.{n} IN TXT "bound=1" "." "." "."', file=fo)
     else:
-        donode(n, root[n])
+        donode(n, root[n], shadow=args.shadow)
 
 if args.upload:
     d = {
