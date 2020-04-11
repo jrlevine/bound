@@ -73,6 +73,11 @@ class Boundchk:
                 bounds.append(d)
                 opoint = nspoint
 
+            if 'NOLOWER' in flags:
+                if self.debug:
+                    print("NOLOWER, done")
+                    break
+
             if nspoint == spoint:
                 if self.debug:
                     print("done", spoint)
