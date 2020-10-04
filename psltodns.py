@@ -134,7 +134,11 @@ if args.dump:
 #if args.shadow:
 #    print("; shadow names included", file=fo)
 
-for n in iter(root):
+# do in alphabetical order
+rootnames = list(root)
+rootnames.sort()
+
+for n in rootnames:
     if vanity and n in vanity:          # mark as vanity if nothing below it
         if len(root[n]) > 1 or root[n]['!']:
             print("??? not a vanity", n)
