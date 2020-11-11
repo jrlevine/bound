@@ -70,7 +70,7 @@ with open(args.file) as f:
 
 # done making label tree
 
-def donode(label, p, parent=[], pbound=0, shadow=False, nl=False):
+def donode(label, p, parent=[], pbound=0, shadow=False, nolower=False):
     """
     process a node recursively
     label: current name
@@ -108,7 +108,7 @@ def donode(label, p, parent=[], pbound=0, shadow=False, nl=False):
         if exclude:
             flags = "NOBOUND"
         bound = True
-    if not ll:
+    if nolower and not ll:
         flags = "NOLOWER"
 
     # next bound
@@ -126,7 +126,7 @@ def donode(label, p, parent=[], pbound=0, shadow=False, nl=False):
     # now recurse
 
     for nl in ll:
-        donode(nl, p[nl], name, nextbound, shadow=shadow, nl=nl)
+        donode(nl, p[nl], name, nextbound, shadow=shadow, nolower=nolower)
 
 if args.dump:
     print(";",root)
@@ -147,7 +147,7 @@ for n in rootnames:
         print(f'{n} IN TXT "bound=1" "{flags}" "." "."', file=fo)
         print(f'*.{n} IN TXT "bound=1" "{flags}" "." "."', file=fo)
     else:
-        donode(n, root[n], shadow=args.shadow, nl=args.nl)
+        donode(n, root[n], shadow=args.shadow, nolower=args.nl)
 
 if args.upload:
     d = {
